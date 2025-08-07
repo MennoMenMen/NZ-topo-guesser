@@ -1,10 +1,12 @@
+const express = require("express");
+const cors = require("cors");
 const bodyParser = require("body-parser");
 const { OAuth2Client } = require("google-auth-library");
 const fs = require("fs");
 const path = require("path");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Google Client ID
 const GOOGLE_CLIENT_ID = "135826388765-svojries0i42qbn8te7uu6fkqq3ptpln.apps.googleusercontent.com";
