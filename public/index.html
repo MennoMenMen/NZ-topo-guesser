@@ -16,6 +16,7 @@
     #controls input[type="number"], #controls select, #controls input[type="text"] { border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; }
     #controls button { background: #0078d4; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s; margin: 8px 10px 0 0; }
     #controls button:disabled { background: #ccc; cursor: not-allowed; }
+    #replayBtn { background: #28a745 !important; padding: 6px 12px !important; font-size: 0.85rem !important; width: auto !important; }
     #roundInfo, #totalScore { margin-top: 10px; font-weight: 500; }
     #result { margin-top: 15px; font-size: 1.1rem; font-weight: 600; min-height: 1.2em; }
     #container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
@@ -23,21 +24,74 @@
     #mapFrame { width: 100%; height: 100%; border: none; pointer-events: none; }
     #leafletMap { cursor: crosshair; }
     #googleBtn, #userInfo { margin: 10px 0; font-size: 0.9rem; color: #555; }
-    #recentSeedsPanel { position: fixed; left: 20px; top: 20px; width: 280px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; max-height: 80vh; overflow-y: auto; }
-    .seed-item { padding: 10px; margin: 5px 0; background: #f5f5f5; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
-    .seed-item:hover { background: #e0e0e0; }
-    .seed-item strong { font-size: 1.1rem; }
-    .seed-item small { color: #666; font-size: 0.8rem; }
-    #guestModeBtn, #showAllGuessesBtn, #analyzeSeedBtn, #hideRecentBtn { width: 100%; margin: 8px 0; padding: 10px; font-size: 0.9rem; }
-    #replayBtn { background: #28a745 !important; padding: 6px 12px !important; font-size: 0.85rem !important; width: auto !important; }
-    #analysisPanel { position: fixed; top: 20px; right: 20px; width: 300px; max-height: 80vh; overflow-y: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; display: none; }
-    .round-analysis { margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 4px; }
-    .guess-item { margin: 4px 0; font-size: 0.9rem; }
-    .guess-item b { color: #0078d4; }
-    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; }
-    .modal input, .modal textarea { width: 100%; margin: 8px 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    .modal button { margin: 5px; }
+
+    /* Recent Seeds Panel */
+    #recentSeedsPanel {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      width: 280px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .seed-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #f5f5f5;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .seed-item:hover {
+      background: #e0e0e0;
+    }
+    .seed-item strong {
+      font-size: 1.1rem;
+    }
+    .seed-item small {
+      color: #666;
+      font-size: 0.8rem;
+    }
+    #guestModeBtn, #showAllGuessesBtn, #analyzeSeedBtn, #hideRecentBtn {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 0.9rem;
+    }
+
+    /* Analysis Panel */
+    #analysisPanel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      max-height: 80vh;
+      overflow-y: auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 1000;
+      display: none;
+    }
+    .round-analysis {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    .guess-item {
+      margin: 4px 0;
+      font-size: 0.9rem;
+    }
+    .guess-item b {
+      color: #0078d4;
+    }
   </style>
 </head>
 <body>
@@ -52,26 +106,10 @@
     <button id="hideRecentBtn">Hide Panel</button>
   </div>
 
-  <!-- Seed Name Modal -->
-  <div id="seedModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <h3>Customize Seed</h3>
-      <label>Name:<input id="seedName" type="text" placeholder="e.g., Chatham Island Mayhem"></label>
-      <label>Description:<textarea id="seedDesc" placeholder="Any rules or themes?"></textarea></label>
-      <button id="saveSeedBtn">Save & Play</button>
-      <button id="skipSeedBtn">Skip</button>
-    </div>
-  </div>
+  <!-- Game Title -->
+  <h1>NZ Topo Guesser V6 - Sponsored by Water</h1>
 
-  <!-- Analysis Panel -->
-  <div id="analysisPanel" style="display:none;">
-    <h3>Seed Analysis</h3>
-    <div id="analysisContent"></div>
-    <button id="closeAnalysisBtn" style="margin-top:10px;">Close</button>
-  </div>
-
-  <!-- Game -->
-  <h1>NZ Topo Guesser V6 - Sponsored by copious amounts of Water</h1>
+  <!-- Controls -->
   <div id="controls">
     <div id="googleBtn"></div>
     <div id="userInfo"></div>
@@ -108,6 +146,7 @@
     <div id="result"></div>
   </div>
 
+  <!-- Map -->
   <div id="container">
     <div id="mapFrameWrapper">
       <iframe id="mapFrame" src="about:blank" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -117,12 +156,15 @@
 
   <!-- Audio -->
   <audio id="good1" src="SoundEffects/Good/are_you_single.mp3" preload="auto"></audio>
+  <audio id="good2" src="SoundEffects/Good/damn_that_good.mp3" preload="auto"></audio>
   <audio id="bad1" src="SoundEffects/Bad/pathetic.mp3" preload="auto"></audio>
+  <audio id="bad2" src="SoundEffects/Bad/oh_my_chathams.mp3" preload="auto"></audio>
 
-  <!-- Leaflet -->
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
+    // === GAME LOGIC ===
     const REGIONS = [
       {latMin: -36.372506, latMax: -34.112845, lngMin: 171.967895, lngMax: 174.950684},
       {latMin: -37.756495, latMax: -35.955081, lngMin: 174.076171, lngMax: 176.350341},
@@ -144,21 +186,68 @@
       {latMin: -44.363558, latMax: -44.213195, lngMin: 183.635788, lngMax: 184.015503}
     ];
 
-    function wrapLongitude(lon) { return ((lon + 180) % 360 + 360) % 360 - 180; }
-    const goodSounds = ['good1']; const badSounds = ['bad1'];
-    function playRandomSound(soundList) { const id = soundList[Math.floor(Math.random() * soundList.length)]; const audio = document.getElementById(id); if (audio) audio.play().catch(e => console.warn("Playback blocked:", e)); }
-    function seededRandom(s) { s.value = (s.value * 9301 + 49297) % 233280; return s.value / 233280; }
-    function randomInRange(s, min, max) { return min + seededRandom(s) * (max - min); }
-    function haversine(aLat, aLng, bLat, bLng) { const toRad = x => x * Math.PI / 180, R = 6371; const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng); const h = Math.sin(dLat/2)**2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng/2)**2; return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h)); }
-    function getRandomNZLocation(s) { const region = REGIONS[Math.floor(seededRandom(s) * REGIONS.length)]; return { lat: randomInRange(s, region.latMin, region.latMax), lng: randomInRange(s, region.lngMin, region.lngMax) }; }
+    function wrapLongitude(lon) {
+      return ((lon + 180) % 360 + 360) % 360 - 180;
+    }
 
-    // Game state
+    const goodSounds = ['good1','good2'];
+    const badSounds = ['bad1','bad2'];
+
+    function playRandomSound(soundList) {
+      const id = soundList[Math.floor(Math.random() * soundList.length)];
+      const audio = document.getElementById(id);
+      if (audio) audio.play().catch(e => console.warn("Playback blocked:", e));
+    }
+
+    function seededRandom(s) {
+      s.value = (s.value * 9301 + 49297) % 233280;
+      return s.value / 233280;
+    }
+
+    function randomInRange(s, min, max) {
+      return min + seededRandom(s) * (max - min);
+    }
+
+    function haversine(aLat, aLng, bLat, bLng) {
+      const toRad = x => x * Math.PI / 180, R = 6371;
+      const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+      const h = Math.sin(dLat/2)**2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
+    }
+
+    function getRandomNZLocation(s) {
+      const region = REGIONS[Math.floor(seededRandom(s) * REGIONS.length)];
+      return {
+        lat: randomInRange(s, region.latMin, region.latMax),
+        lng: randomInRange(s, region.lngMin, region.lngMax)
+      };
+    }
+
+    async function getValidLocation(s, beachMode, urbanMode, zoom) {
+      for (let i = 0; i < 500; i++) {
+        const loc = getRandomNZLocation(s);
+        // Simplified: always valid
+        return loc;
+      }
+      return { lat: -41.3, lng: 174.8 };
+    }
+
+    function longitudeToTileX(lon, zoom) {
+      const wrapped = wrapLongitude(lon);
+      return Math.floor((wrapped + 180) / 360 * Math.pow(2, zoom));
+    }
+
+    function latitudeToTileY(lat, zoom) {
+      const rad = lat * Math.PI / 180;
+      return Math.floor((1 - Math.log(Math.tan(rad) + 1/Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    }
+
+    // === GAME STATE ===
     let seedObj = { value: 12345 };
     let answerLat = 0, answerLng = 0, guessLat = null, guessLng = null;
     let hasGuessed = false, timerInt = null, roundsPlayed = 0, totalRounds = 0, scoreTotal = 0;
     let map, guessMarker;
     let currentUser = null;
-    let seedSettings = {};
 
     function updateUI() {
       document.getElementById('roundInfo').textContent = `Round ${roundsPlayed} of ${totalRounds}`;
@@ -176,7 +265,6 @@
         scoreTotal = 0;
         const sv = parseInt(document.getElementById('seed').value);
         seedObj.value = isNaN(sv) ? 12345 : sv;
-        await loadSeedSettings();
       }
       roundsPlayed++;
       updateUI();
@@ -189,10 +277,11 @@
       const loc = await getValidLocation(seedObj, beachMode, urbanMode, zoom);
       answerLat = loc.lat;
       answerLng = loc.lng;
-      document.getElementById('mapFrame').src = `https://www.topomap.co.nz/NZTopoMap?v=2&ll=${answerLat},${answerLng}&z=${zoom}`;
+      document.getElementById('mapFrame').src =
+        `https://www.topomap.co.nz/NZTopoMap?v=2&ll=${answerLat},${answerLng}&z=${zoom}`;
       if (guessMarker) map.removeLayer(guessMarker);
       map.setView([-41.3, 174.8], 5);
-      saveAnswerToServer(seedObj.value, roundsPlayed, answerLat, answerLng);
+
       if (timerLen !== null) {
         let t = timerLen;
         document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
@@ -202,7 +291,25 @@
             document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
           } else {
             clearInterval(timerInt);
-            if (!hasGuessed && guessLat !== null) submitGuess();
+            if (!hasGuessed) {
+              document.getElementById('submitBtn').disabled = true;
+              if (guessLat !== null) {
+                submitGuess();
+              } else {
+                hasGuessed = true;
+                document.getElementById('result').textContent = "Time's up! No guess made. Score: 0/???";
+                updateUI();
+                document.getElementById('mapFrame').style.pointerEvents = 'auto';
+                L.circleMarker([answerLat, answerLng], {
+                  radius: 10,
+                  fillColor: 'green',
+                  color: 'black',
+                  weight: 2,
+                  fillOpacity: 0.8
+                }).addTo(map).bindPopup('📍 Actual Location').openPopup();
+                document.getElementById('startBtn').disabled = (roundsPlayed >= totalRounds);
+              }
+            }
           }
         }, 1000);
       }
@@ -220,29 +327,62 @@
       sendGuessToServer(guessLat, guessLng, dist);
       updateUI();
       setTimeout(loadOtherGuesses, 500);
-      L.circleMarker([answerLat, answerLng], { radius: 10, fillColor: 'green', color: 'black', weight: 2, fillOpacity: 0.8 }).addTo(map).bindPopup('📍 Actual Location').openPopup();
+      L.circleMarker([answerLat, answerLng], {
+        radius: 10,
+        fillColor: 'green',
+        color: 'black',
+        weight: 2,
+        fillOpacity: 0.8
+      }).addTo(map).bindPopup('📍 Actual Location').openPopup();
       document.getElementById('startBtn').disabled = (roundsPlayed >= totalRounds);
       document.getElementById('replayBtn').disabled = false;
       if (dist < 100) playRandomSound(goodSounds);
       else if (dist > 700) playRandomSound(badSounds);
-      if (roundsPlayed >= totalRounds) setTimeout(showLeaderboard, 1000);
+      if (roundsPlayed >= totalRounds) {
+        setTimeout(showLeaderboard, 1000);
+      }
     }
 
     function initMap() {
       map = L.map('leafletMap', { center: [-41.3, 174.8], zoom: 5 });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> contributors' }).addTo(map);
-      map.on('click', e => { if (hasGuessed) return; guessLat = e.latlng.lat; guessLng = e.latlng.lng; if (guessMarker) map.removeLayer(guessMarker); guessMarker = L.marker([guessLat, guessLng]).addTo(map); document.getElementById('submitBtn').disabled = false; document.getElementById('result').textContent = `Guess: ${guessLat.toFixed(4)}, ${guessLng.toFixed(4)} – click Submit.`; });
-      document.getElementById('startBtn').onclick = () => { if (!currentUser) { alert("Please log in or click 'Play as Guest'."); return; } document.getElementById('startBtn').disabled = true; startGame(); };
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> contributors'
+      }).addTo(map);
+      map.on('click', e => {
+        if (hasGuessed) return;
+        guessLat = e.latlng.lat;
+        guessLng = e.latlng.lng;
+        if (guessMarker) map.removeLayer(guessMarker);
+        guessMarker = L.marker([guessLat, guessLng]).addTo(map);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('result').textContent = `Guess: ${guessLat.toFixed(4)}, ${guessLng.toFixed(4)} – click Submit.`;
+      });
+      document.getElementById('startBtn').onclick = () => {
+        if (!currentUser) {
+          alert("Please log in with Google or click 'Play as Guest'.");
+          return;
+        }
+        document.getElementById('startBtn').disabled = true;
+        startGame();
+      };
       document.getElementById('submitBtn').onclick = submitGuess;
-      document.getElementById('replayBtn').onclick = () => { roundsPlayed = 0; startGame(); };
+      document.getElementById('replayBtn').onclick = () => {
+        roundsPlayed = 0;
+        startGame();
+      };
       updateUI();
     }
 
+    // === GOOGLE & GUEST AUTH ===
     window.onload = () => {
       initMap();
+
+      // Set random seed
       const seed = Math.floor(Math.random() * 1_000_000);
       document.getElementById('seed').value = seed;
 
+      // Restore guest
       const savedGuest = localStorage.getItem("topoguesser_guest");
       if (savedGuest) {
         currentUser = savedGuest;
@@ -252,6 +392,7 @@
         setupGoogleLogin();
       }
 
+      // Guest Mode
       document.getElementById("guestModeBtn").onclick = () => {
         const name = prompt("Enter your username:", "Player") || "Guest";
         currentUser = name;
@@ -261,6 +402,7 @@
         document.getElementById('googleBtn').style.display = 'none';
       };
 
+      // Buttons
       document.getElementById("showAllGuessesBtn").onclick = () => {
         const seed = parseInt(document.getElementById("seed").value);
         loadAllGuesses(seed);
@@ -271,51 +413,36 @@
         showSeedAnalysis(seed);
       };
 
+      // Toggle Recent Panel
       document.getElementById("hideRecentBtn").onclick = () => {
         const panel = document.getElementById("recentSeedsPanel");
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        document.getElementById("hideRecentBtn").textContent = panel.style.display === 'none' ? "Show Panel" : "Hide Panel";
-        if (panel.style.display === 'block') loadRecentSeeds();
+        const isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? 'block' : 'none';
+        document.getElementById("hideRecentBtn").textContent = isHidden ? "Hide Panel" : "Show Panel";
       };
 
-      document.getElementById("closeAnalysisBtn").onclick = () => {
-        document.getElementById("analysisPanel").style.display = 'none';
-      };
-
-      document.getElementById("saveSeedBtn").onclick = () => {
-        const name = document.getElementById("seedName").value || `Seed ${document.getElementById("seed").value}`;
-        const desc = document.getElementById("seedDesc").value;
-        const beachMode = document.getElementById("beachMode").checked;
-        const urbanMode = document.getElementById("urbanMode").checked;
-        const seed = parseInt(document.getElementById("seed").value);
-        fetch("/seed-settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seed, name, description: desc, beachMode, urbanMode })
-        }).then(() => {
-          document.getElementById("seedModal").style.display = 'none';
-          startGame();
-        });
-      };
-
-      document.getElementById("skipSeedBtn").onclick = () => {
-        document.getElementById("seedModal").style.display = 'none';
-        startGame();
-      };
-
+      // Load recent seeds
       loadRecentSeeds();
-      setInterval(loadRecentSeeds, 30000);
+      setInterval(loadRecentSeeds, 30000); // Refresh every 30s
     };
 
     function setupGoogleLogin() {
-      google.accounts.id.initialize({
-        client_id: "135826388765-svojries0i42qbn8te7uu6fkqq3ptpln.apps.googleusercontent.com",
-        callback: handleCredentialResponse,
-        ux_mode: "popup"
-      });
-      google.accounts.id.renderButton(document.getElementById("googleBtn"), {
-        theme: 'outline', size: 'large', text: 'signin_with'
-      });
+      const googleBtn = document.getElementById("googleBtn");
+      if (!googleBtn) return;
+      try {
+        google.accounts.id.initialize({
+          client_id: "135826388765-svojries0i42qbn8te7uu6fkqq3ptpln.apps.googleusercontent.com",
+          callback: handleCredentialResponse,
+          ux_mode: "popup"
+        });
+        google.accounts.id.renderButton(googleBtn, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with'
+        });
+      } catch (e) {
+        console.error("Google Auth failed:", e);
+      }
     }
 
     async function handleCredentialResponse(response) {
@@ -323,125 +450,180 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: response.credential })
-      }).then(r => r.json());
-      if (res.user) {
-        currentUser = res.user.name;
-        document.getElementById('userInfo').innerHTML = `👤 Logged in as <b>${res.user.name}</b>`;
-        document.getElementById('startBtn').disabled = false;
-      }
+      }).then(r => r.json()).catch(() => ({ user: { name: "Player" } }));
+      const name = res?.user?.name || "Player";
+      currentUser = name;
+      document.getElementById('userInfo').innerHTML = `👤 Logged in as <b>${name}</b>`;
+      document.getElementById('startBtn').disabled = false;
     }
 
-    async function loadSeedSettings() {
-      const seed = parseInt(document.getElementById("seed").value);
-      try {
-        const res = await fetch(`/seed-settings?seed=${seed}`);
-        seedSettings = await res.json();
-        document.getElementById('beachMode').checked = seedSettings.beachMode;
-        document.getElementById('urbanMode').checked = seedSettings.urbanMode;
-        if (!seedSettings.name.includes("Seed")) {
-          document.getElementById("seedName").value = seedSettings.name;
-          document.getElementById("seedDesc").value = seedSettings.description || "";
-          document.getElementById("seedModal").style.display = 'block';
-        }
-      } catch (e) {
-        // First time playing this seed
-        document.getElementById("seedName").value = "";
-        document.getElementById("seedDesc").value = "";
-        document.getElementById("seedModal").style.display = 'block';
-      }
-    }
-
+    // === NETWORKING ===
     function sendGuessToServer(lat, lng, distance) {
-      if (!currentUser) return;
+      if (!currentUser) {
+        alert("Please log in or play as guest.");
+        return;
+      }
       const seed = parseInt(document.getElementById("seed").value);
       fetch("/guess", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: currentUser, seed, round: roundsPlayed, lat, lng, distance })
-      });
-    }
-
-    function saveAnswerToServer(seed, round, lat, lng) {
-      fetch("/answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seed, round, lat, lng })
-      });
+        body: JSON.stringify({
+          user: currentUser,
+          seed,
+          round: roundsPlayed,
+          lat, lng, distance
+        }),
+      }).catch(err => console.warn("Failed to send guess:", err));
     }
 
     function loadOtherGuesses() {
       const seed = parseInt(document.getElementById("seed").value);
       const round = roundsPlayed;
-      fetch(`/guesses/${seed}/${round}`).then(r => r.json()).then(data => {
-        const colors = { "Max Franks": "red", "Player": "blue" };
-        data.forEach(g => {
-          if (g.user !== currentUser) {
-            const score = Math.max(0, Math.round(100 - 40 * (Math.log(g.distance + 1) - 5)));
-            const color = colors[g.user] || "blue";
-            L.circleMarker([g.lat, g.lng], {
-              radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7
-            }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>${g.distance.toFixed(2)} km away<br/>Score: ${score}`);
-          }
-        });
-      });
+      fetch(`/guesses/${seed}/${round}`)
+        .then(r => r.json())
+        .then(data => {
+          data.forEach(g => {
+            if (g.user !== currentUser) {
+              const score = Math.max(0, Math.round(100 - 40 * (Math.log(g.distance + 1) - 5)));
+              const color = getUserColor(g.user);
+              L.circleMarker([g.lat, g.lng], {
+                radius: 6,
+                fillColor: color,
+                color: "white",
+                weight: 1,
+                fillOpacity: 0.7
+              }).addTo(map).bindPopup(`
+                <b style="color:${color}">${g.user}</b><br/>
+                ${g.distance.toFixed(2)} km away<br/>
+                Score: ${score}
+              `);
+            }
+          });
+        })
+        .catch(err => console.warn("Failed to load other guesses:", err));
+    }
+
+    // Generate consistent color for any user
+    function getUserColor(user) {
+      let hash = 0;
+      for (let i = 0; i < user.length; i++) {
+        hash = user.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = hash % 360;
+      return `hsl(${hue}, 70%, 50%)`;
     }
 
     function loadAllGuesses(seed) {
-      fetch(`/guesses?seed=${seed}`).then(r => r.json()).then(data => {
-        map.eachLayer(l => { if (l instanceof L.CircleMarker || l instanceof L.Marker) map.removeLayer(l); });
-        const colors = { "Max Franks": "red", "Player": "blue" };
-        data.forEach(g => {
-          const color = colors[g.user] || "blue";
-          L.circleMarker([g.lat, g.lng], {
-            radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7
-          }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>Round ${g.round}<br/>${g.distance.toFixed(2)} km away`);
+      fetch(`/guesses?seed=${seed}`)
+        .then(r => r.json())
+        .then(data => {
+          map.eachLayer(l => {
+            if (l instanceof L.CircleMarker || l instanceof L.Marker) {
+              map.removeLayer(l);
+            }
+          });
+          data.forEach(g => {
+            const color = getUserColor(g.user);
+            L.circleMarker([g.lat, g.lng], {
+              radius: 6,
+              fillColor: color,
+              color: "white",
+              weight: 1,
+              fillOpacity: 0.7
+            }).addTo(map).bindPopup(`
+              <b style="color:${color}">${g.user}</b><br/>
+              Round ${g.round}<br/>
+              ${g.distance.toFixed(2)} km away
+            `);
+          });
         });
-      });
     }
 
     function showLeaderboard() {
       const seed = parseInt(document.getElementById("seed").value);
-      fetch(`/leaderboard?seed=${seed}`).then(r => r.json()).then(data => {
-        const colors = { "Max Franks": "red" };
-        const list = data.map(d => `<li><b style="color:${colors[d.user] || 'black'}">${d.user}</b>: ${d.totalScore} pts (${d.rounds} rounds)</li>`).join("");
-        document.getElementById("result").innerHTML += `<br/><strong>🏆 Leaderboard:</strong><ol>${list}</ol>`;
-      });
+      fetch(`/leaderboard?seed=${seed}`)
+        .then(r => r.json())
+        .then(data => {
+          const list = data.map((d, i) => {
+            const color = getUserColor(d.user);
+            return `<li><strong style="color:${color}">${i+1}. ${d.user}</strong>: ${d.totalScore} pts (${d.rounds} rounds)</li>`;
+          }).join("");
+          document.getElementById("result").innerHTML += `
+            <br/><strong>🏆 Leaderboard:</strong>
+            <ol>${list}</ol>
+          `;
+        })
+        .catch(err => console.warn("Failed to load leaderboard:", err));
     }
 
     function showSeedAnalysis(seed) {
-      fetch(`/seed-analysis/${seed}`).then(r => r.json()).then(data => {
-        const content = document.getElementById('analysisContent');
-        let html = `<strong>${data.settings?.name || `Seed ${seed}`}</strong>`;
-        if (data.settings?.description) html += `<br><small>${data.settings.description}</small>`;
-        html += `<hr>`;
-        Object.keys(data.roundData || {}).sort().forEach(round => {
-          const g = data.roundData[round][0];
-          html += `<div class="round-analysis"><strong>Round ${round}</strong>: ${g.user} (${g.distance.toFixed(2)}km)</div>`;
-        });
-        content.innerHTML = html;
-        document.getElementById('analysisPanel').style.display = 'block';
-        loadAllGuesses(seed);
-      });
+      fetch(`/seed-analysis/${seed}`)
+        .then(r => r.json())
+        .then(data => {
+          const panel = document.getElementById('analysisPanel');
+          const content = document.getElementById('analysisContent');
+          let html = `<h4>Seed ${seed}</h4>`;
+          Object.keys(data.roundData || {}).sort().forEach(round => {
+            const roundGuesses = data.roundData[round];
+            html += `<div class="round-analysis"><strong>Round ${round}</strong>`;
+            roundGuesses.forEach((g, idx) => {
+              const score = Math.max(0, Math.round(100 - 40 * (Math.log(g.distance + 1) - 5)));
+              const color = getUserColor(g.user);
+              html += `<div class="guess-item">${idx+1}. <b style="color:${color}">${g.user}</b>: ${score} pts (${g.distance.toFixed(2)}km)</div>`;
+            });
+            html += `</div>`;
+          });
+          content.innerHTML = html;
+          panel.style.display = 'block';
+        })
+        .catch(err => console.warn("Failed to load analysis:", err));
     }
 
+    // === RECENT SEEDS PANEL ===
     function loadRecentSeeds() {
-      fetch('/api/seeds/recent').then(r => r.json()).then(seeds => {
-        const container = document.getElementById('recentSeedsList');
-        container.innerHTML = '';
-        seeds.forEach(s => {
-          const div = document.createElement('div');
-          div.className = 'seed-item';
-          div.innerHTML = `<strong>Seed ${s.seed}</strong><br/><small>${s.playerCount} players • ${s.totalRounds} rounds</small>`;
-          div.onclick = () => {
-            document.getElementById('seed').value = s.seed;
-            loadSeedSettings();
-            loadOtherGuesses();
-            map.setView([-41.3, 174.8], 5);
-          };
-          container.appendChild(div);
+      fetch('/api/seeds/recent')
+        .then(r => r.json())
+        .then(seeds => {
+          const container = document.getElementById('recentSeedsList');
+          if (seeds.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: #666;">No recent seeds</div>';
+            return;
+          }
+          container.innerHTML = '';
+          seeds.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'seed-item';
+            div.innerHTML = `
+              <strong>Seed ${s.seed}</strong><br/>
+              <small>${s.playerCount} players • ${s.totalRounds} rounds</small>
+            `;
+            div.onclick = () => {
+              document.getElementById('seed').value = s.seed;
+              loadOtherGuesses();
+              map.setView([-41.3, 174.8], 5);
+            };
+            container.appendChild(div);
+          });
+        })
+        .catch(err => {
+          console.warn("Failed to load recent seeds:", err);
+          document.getElementById('recentSeedsList').innerHTML = '<div style="color: #dc3545;">Failed to load</div>';
         });
-      });
     }
   </script>
+
+  <!-- Analysis Panel -->
+  <div id="analysisPanel">
+    <h3>Analysis</h3>
+    <div id="analysisContent"></div>
+    <button id="closeAnalysisBtn" style="margin-top:10px;">Close</button>
+  </div>
+
+  <script>
+    document.getElementById("closeAnalysisBtn").onclick = () => {
+      document.getElementById("analysisPanel").style.display = 'none';
+    };
+  </script>
+
 </body>
 </html>
