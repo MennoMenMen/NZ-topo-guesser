@@ -28,15 +28,21 @@
     .seed-item:hover { background: #e0e0e0; }
     .seed-item strong { font-size: 1.1rem; }
     .seed-item small { color: #666; font-size: 0.8rem; }
-    #guestModeBtn, #showAllGuessesBtn, #analyzeSeedBtn, #hideRecentBtn, #replayBtn { width: 100%; margin: 8px 0; padding: 10px; font-size: 0.9rem; }
+    #guestModeBtn, #showAllGuessesBtn, #analyzeSeedBtn, #hideRecentBtn { width: 100%; margin: 8px 0; padding: 10px; font-size: 0.9rem; }
+    #replayBtn { background: #28a745 !important; padding: 6px 12px !important; font-size: 0.85rem !important; width: auto !important; }
     #analysisPanel { position: fixed; top: 20px; right: 20px; width: 300px; max-height: 80vh; overflow-y: auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; display: none; }
     .round-analysis { margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 4px; }
     .guess-item { margin: 4px 0; font-size: 0.9rem; }
     .guess-item b { color: #0078d4; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px; }
+    .modal input, .modal textarea { width: 100%; margin: 8px 0; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .modal button { margin: 5px; }
   </style>
 </head>
 <body>
 
+  <!-- Recent Seeds Panel -->
   <div id="recentSeedsPanel">
     <h3>Recent Seeds</h3>
     <div id="recentSeedsList">Loading...</div>
@@ -46,8 +52,26 @@
     <button id="hideRecentBtn">Hide Panel</button>
   </div>
 
-  <h1>NZ Topo Guesser V6 - Sponsored by Water</h1>
+  <!-- Seed Name Modal -->
+  <div id="seedModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Customize Seed</h3>
+      <label>Name:<input id="seedName" type="text" placeholder="e.g., Chatham Island Mayhem"></label>
+      <label>Description:<textarea id="seedDesc" placeholder="Any rules or themes?"></textarea></label>
+      <button id="saveSeedBtn">Save & Play</button>
+      <button id="skipSeedBtn">Skip</button>
+    </div>
+  </div>
 
+  <!-- Analysis Panel -->
+  <div id="analysisPanel" style="display:none;">
+    <h3>Seed Analysis</h3>
+    <div id="analysisContent"></div>
+    <button id="closeAnalysisBtn" style="margin-top:10px;">Close</button>
+  </div>
+
+  <!-- Game -->
+  <h1>NZ Topo Guesser V6 - Sponsored by copious amounts of Water</h1>
   <div id="controls">
     <div id="googleBtn"></div>
     <div id="userInfo"></div>
@@ -91,11 +115,11 @@
     <div id="leafletMap"></div>
   </div>
 
+  <!-- Audio -->
   <audio id="good1" src="SoundEffects/Good/are_you_single.mp3" preload="auto"></audio>
-  <audio id="good2" src="SoundEffects/Good/damn_that_good.mp3" preload="auto"></audio>
   <audio id="bad1" src="SoundEffects/Bad/pathetic.mp3" preload="auto"></audio>
-  <audio id="bad2" src="SoundEffects/Bad/oh_my_chathams.mp3" preload="auto"></audio>
 
+  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
@@ -121,116 +145,14 @@
     ];
 
     function wrapLongitude(lon) { return ((lon + 180) % 360 + 360) % 360 - 180; }
-
-    const goodSounds = ['good1','good2'];
-    const badSounds = ['bad1','bad2'];
-
-    function playRandomSound(soundList) {
-      const id = soundList[Math.floor(Math.random() * soundList.length)];
-      const audio = document.getElementById(id);
-      if (audio) audio.play().catch(e => console.warn("Playback blocked:", e));
-    }
-
+    const goodSounds = ['good1']; const badSounds = ['bad1'];
+    function playRandomSound(soundList) { const id = soundList[Math.floor(Math.random() * soundList.length)]; const audio = document.getElementById(id); if (audio) audio.play().catch(e => console.warn("Playback blocked:", e)); }
     function seededRandom(s) { s.value = (s.value * 9301 + 49297) % 233280; return s.value / 233280; }
     function randomInRange(s, min, max) { return min + seededRandom(s) * (max - min); }
-    function haversine(aLat, aLng, bLat, bLng) {
-      const toRad = x => x * Math.PI / 180, R = 6371;
-      const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
-      const h = Math.sin(dLat/2)**2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng/2)**2;
-      return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
-    }
+    function haversine(aLat, aLng, bLat, bLng) { const toRad = x => x * Math.PI / 180, R = 6371; const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng); const h = Math.sin(dLat/2)**2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng/2)**2; return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h)); }
+    function getRandomNZLocation(s) { const region = REGIONS[Math.floor(seededRandom(s) * REGIONS.length)]; return { lat: randomInRange(s, region.latMin, region.latMax), lng: randomInRange(s, region.lngMin, region.lngMax) }; }
 
-    function getRandomNZLocation(s) {
-      const region = REGIONS[Math.floor(seededRandom(s) * REGIONS.length)];
-      return { lat: randomInRange(s, region.latMin, region.latMax), lng: randomInRange(s, region.lngMin, region.lngMax) };
-    }
-
-    async function tileHasLand(lat, lng, zoom) {
-      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
-      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return false;
-        const blob = await res.blob();
-        const bmp = await createImageBitmap(blob);
-        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bmp, 0, 0);
-        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
-        for (let i = 0; i < data.length; i += 4) {
-          const [r, g, b] = [data[i], data[i+1], data[i+2]];
-          if (r < 200 && g < 200 && b < 200) return true;
-        }
-      } catch { return false; }
-      return false;
-    }
-
-    async function tileHasEnoughWater(lat, lng, zoom) {
-      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
-      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return false;
-        const blob = await res.blob();
-        const bmp = await createImageBitmap(blob);
-        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bmp, 0, 0);
-        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
-        let water = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          const [r, g, b] = [data[i], data[i+1], data[i+2]];
-          if (b > 240 && b < 250 && r > 200 && r < 220 && g > 225 && g < 238) water++;
-        }
-        return (water / (bmp.width * bmp.height)) >= 0.1;
-      } catch { return false; }
-    }
-
-    async function tileHasEnoughUrban(lat, lng, zoom) {
-      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
-      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return false;
-        const blob = await res.blob();
-        const bmp = await createImageBitmap(blob);
-        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bmp, 0, 0);
-        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
-        let urban = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          const [r, g, b] = [data[i], data[i+1], data[i+2]];
-          if (r > 180 && r < 190 && g > 180 && g < 190 && b > 175 && b < 187) urban++;
-        }
-        return (urban / (bmp.width * bmp.height)) >= 0.01;
-      } catch { return false; }
-    }
-
-    async function getValidLocation(s, beachMode, urbanMode, zoom) {
-      for (let i = 0; i < 500; i++) {
-        const loc = getRandomNZLocation(s);
-        if (beachMode) {
-          if (await tileHasLand(loc.lat, loc.lng, zoom) && await tileHasEnoughWater(loc.lat, loc.lng, zoom)) return loc;
-        } else if (urbanMode) {
-          if (await tileHasEnoughUrban(loc.lat, loc.lng, zoom)) return loc;
-        } else {
-          if (await tileHasLand(loc.lat, loc.lng, zoom)) return loc;
-        }
-      }
-      return { lat: -41.3, lng: 174.8 };
-    }
-
-    function longitudeToTileX(lon, zoom) {
-      const wrapped = wrapLongitude(lon);
-      return Math.floor((wrapped + 180) / 360 * Math.pow(2, zoom));
-    }
-
-    function latitudeToTileY(lat, zoom) {
-      const rad = lat * Math.PI / 180;
-      return Math.floor((1 - Math.log(Math.tan(rad) + 1/Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
-    }
-
+    // Game state
     let seedObj = { value: 12345 };
     let answerLat = 0, answerLng = 0, guessLat = null, guessLng = null;
     let hasGuessed = false, timerInt = null, roundsPlayed = 0, totalRounds = 0, scoreTotal = 0;
@@ -276,8 +198,12 @@
         document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
         timerInt = setInterval(() => {
           t--;
-          if (t > 0) { document.getElementById('result').textContent = `Timer: ${t}s remaining…`; }
-          else { clearInterval(timerInt); if (!hasGuessed) { document.getElementById('submitBtn').disabled = true; if (guessLat !== null) { submitGuess(); } else { hasGuessed = true; document.getElementById('result').textContent = "Time's up! No guess made. Score: 0/???"; updateUI(); document.getElementById('mapFrame').style.pointerEvents = 'auto'; L.circleMarker([answerLat, answerLng], { radius: 10, fillColor: 'green', color: 'black', weight: 2, fillOpacity: 0.8 }).addTo(map).bindPopup('📍 Actual Location').openPopup(); document.getElementById('startBtn').disabled = (roundsPlayed >= totalRounds); } } }
+          if (t > 0) {
+            document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
+          } else {
+            clearInterval(timerInt);
+            if (!hasGuessed && guessLat !== null) submitGuess();
+          }
         }, 1000);
       }
     }
@@ -299,14 +225,14 @@
       document.getElementById('replayBtn').disabled = false;
       if (dist < 100) playRandomSound(goodSounds);
       else if (dist > 700) playRandomSound(badSounds);
-      if (roundsPlayed >= totalRounds) { setTimeout(showLeaderboard, 1000); }
+      if (roundsPlayed >= totalRounds) setTimeout(showLeaderboard, 1000);
     }
 
     function initMap() {
       map = L.map('leafletMap', { center: [-41.3, 174.8], zoom: 5 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> contributors' }).addTo(map);
       map.on('click', e => { if (hasGuessed) return; guessLat = e.latlng.lat; guessLng = e.latlng.lng; if (guessMarker) map.removeLayer(guessMarker); guessMarker = L.marker([guessLat, guessLng]).addTo(map); document.getElementById('submitBtn').disabled = false; document.getElementById('result').textContent = `Guess: ${guessLat.toFixed(4)}, ${guessLng.toFixed(4)} – click Submit.`; });
-      document.getElementById('startBtn').onclick = () => { if (!currentUser) { alert("Please log in with Google or click 'Play as Guest'."); return; } document.getElementById('startBtn').disabled = true; startGame(); };
+      document.getElementById('startBtn').onclick = () => { if (!currentUser) { alert("Please log in or click 'Play as Guest'."); return; } document.getElementById('startBtn').disabled = true; startGame(); };
       document.getElementById('submitBtn').onclick = submitGuess;
       document.getElementById('replayBtn').onclick = () => { roundsPlayed = 0; startGame(); };
       updateUI();
@@ -316,40 +242,131 @@
       initMap();
       const seed = Math.floor(Math.random() * 1_000_000);
       document.getElementById('seed').value = seed;
+
       const savedGuest = localStorage.getItem("topoguesser_guest");
-      if (savedGuest) { currentUser = savedGuest; document.getElementById('userInfo').innerHTML = `🎮 Guest: <b>${savedGuest}</b>`; document.getElementById('startBtn').disabled = false; } else { setupGoogleLogin(); }
-      document.getElementById("guestModeBtn").onclick = () => { const name = prompt("Enter your username:", "Player") || "Guest"; currentUser = name; localStorage.setItem("topoguesser_guest", name); document.getElementById('userInfo').innerHTML = `🎮 Guest: <b>${name}</b>`; document.getElementById('startBtn').disabled = false; document.getElementById('googleBtn').style.display = 'none'; };
-      document.getElementById("showAllGuessesBtn").onclick = () => { const seed = parseInt(document.getElementById("seed").value); loadAllGuesses(seed); };
-      document.getElementById("analyzeSeedBtn").onclick = () => { const seed = parseInt(document.getElementById('seed').value); showSeedAnalysis(seed); };
-      document.getElementById("hideRecentBtn").onclick = () => { const panel = document.getElementById("recentSeedsPanel"); panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; document.getElementById("hideRecentBtn").textContent = panel.style.display === 'none' ? "Show Panel" : "Hide Panel"; if (panel.style.display === 'block') loadRecentSeeds(); };
-      loadRecentSeeds(); setInterval(loadRecentSeeds, 30000);
+      if (savedGuest) {
+        currentUser = savedGuest;
+        document.getElementById('userInfo').innerHTML = `🎮 Guest: <b>${savedGuest}</b>`;
+        document.getElementById('startBtn').disabled = false;
+      } else {
+        setupGoogleLogin();
+      }
+
+      document.getElementById("guestModeBtn").onclick = () => {
+        const name = prompt("Enter your username:", "Player") || "Guest";
+        currentUser = name;
+        localStorage.setItem("topoguesser_guest", name);
+        document.getElementById('userInfo').innerHTML = `🎮 Guest: <b>${name}</b>`;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('googleBtn').style.display = 'none';
+      };
+
+      document.getElementById("showAllGuessesBtn").onclick = () => {
+        const seed = parseInt(document.getElementById("seed").value);
+        loadAllGuesses(seed);
+      };
+
+      document.getElementById("analyzeSeedBtn").onclick = () => {
+        const seed = parseInt(document.getElementById('seed').value);
+        showSeedAnalysis(seed);
+      };
+
+      document.getElementById("hideRecentBtn").onclick = () => {
+        const panel = document.getElementById("recentSeedsPanel");
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        document.getElementById("hideRecentBtn").textContent = panel.style.display === 'none' ? "Show Panel" : "Hide Panel";
+        if (panel.style.display === 'block') loadRecentSeeds();
+      };
+
+      document.getElementById("closeAnalysisBtn").onclick = () => {
+        document.getElementById("analysisPanel").style.display = 'none';
+      };
+
+      document.getElementById("saveSeedBtn").onclick = () => {
+        const name = document.getElementById("seedName").value || `Seed ${document.getElementById("seed").value}`;
+        const desc = document.getElementById("seedDesc").value;
+        const beachMode = document.getElementById("beachMode").checked;
+        const urbanMode = document.getElementById("urbanMode").checked;
+        const seed = parseInt(document.getElementById("seed").value);
+        fetch("/seed-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seed, name, description: desc, beachMode, urbanMode })
+        }).then(() => {
+          document.getElementById("seedModal").style.display = 'none';
+          startGame();
+        });
+      };
+
+      document.getElementById("skipSeedBtn").onclick = () => {
+        document.getElementById("seedModal").style.display = 'none';
+        startGame();
+      };
+
+      loadRecentSeeds();
+      setInterval(loadRecentSeeds, 30000);
     };
 
     function setupGoogleLogin() {
-      const googleBtn = document.getElementById("googleBtn");
-      if (!googleBtn) return;
-      try {
-        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, ux_mode: "popup" });
-        google.accounts.id.renderButton(googleBtn, { theme: 'outline', size: 'large', text: 'signin_with' });
-      } catch (e) { console.error("Google Auth failed:", e); }
+      google.accounts.id.initialize({
+        client_id: "135826388765-svojries0i42qbn8te7uu6fkqq3ptpln.apps.googleusercontent.com",
+        callback: handleCredentialResponse,
+        ux_mode: "popup"
+      });
+      google.accounts.id.renderButton(document.getElementById("googleBtn"), {
+        theme: 'outline', size: 'large', text: 'signin_with'
+      });
     }
 
     async function handleCredentialResponse(response) {
-      const res = await fetch('/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: response.credential }) }).then(r => r.json()).catch(() => ({ user: { name: "Player" } }));
-      const name = res?.user?.name || "Player";
-      currentUser = name;
-      document.getElementById('userInfo').innerHTML = `👤 Logged in as <b>${name}</b>`;
-      document.getElementById('startBtn').disabled = false;
+      const res = await fetch('/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+      }).then(r => r.json());
+      if (res.user) {
+        currentUser = res.user.name;
+        document.getElementById('userInfo').innerHTML = `👤 Logged in as <b>${res.user.name}</b>`;
+        document.getElementById('startBtn').disabled = false;
+      }
+    }
+
+    async function loadSeedSettings() {
+      const seed = parseInt(document.getElementById("seed").value);
+      try {
+        const res = await fetch(`/seed-settings?seed=${seed}`);
+        seedSettings = await res.json();
+        document.getElementById('beachMode').checked = seedSettings.beachMode;
+        document.getElementById('urbanMode').checked = seedSettings.urbanMode;
+        if (!seedSettings.name.includes("Seed")) {
+          document.getElementById("seedName").value = seedSettings.name;
+          document.getElementById("seedDesc").value = seedSettings.description || "";
+          document.getElementById("seedModal").style.display = 'block';
+        }
+      } catch (e) {
+        // First time playing this seed
+        document.getElementById("seedName").value = "";
+        document.getElementById("seedDesc").value = "";
+        document.getElementById("seedModal").style.display = 'block';
+      }
     }
 
     function sendGuessToServer(lat, lng, distance) {
-      if (!currentUser) { alert("Please log in or play as guest."); return; }
+      if (!currentUser) return;
       const seed = parseInt(document.getElementById("seed").value);
-      fetch("/guess", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user: currentUser, seed, round: roundsPlayed, lat, lng, distance }) }).catch(err => console.warn("Failed to send guess:", err));
+      fetch("/guess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: currentUser, seed, round: roundsPlayed, lat, lng, distance })
+      });
     }
 
     function saveAnswerToServer(seed, round, lat, lng) {
-      fetch("/answer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seed, round, lat, lng }) }).catch(err => console.warn("Failed to save answer:", err));
+      fetch("/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seed, round, lat, lng })
+      });
     }
 
     function loadOtherGuesses() {
@@ -361,7 +378,9 @@
           if (g.user !== currentUser) {
             const score = Math.max(0, Math.round(100 - 40 * (Math.log(g.distance + 1) - 5)));
             const color = colors[g.user] || "blue";
-            L.circleMarker([g.lat, g.lng], { radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7 }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>${g.distance.toFixed(2)} km away<br/>Score: ${score}`);
+            L.circleMarker([g.lat, g.lng], {
+              radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7
+            }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>${g.distance.toFixed(2)} km away<br/>Score: ${score}`);
           }
         });
       });
@@ -373,7 +392,9 @@
         const colors = { "Max Franks": "red", "Player": "blue" };
         data.forEach(g => {
           const color = colors[g.user] || "blue";
-          L.circleMarker([g.lat, g.lng], { radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7 }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>Round ${g.round}<br/>${g.distance.toFixed(2)} km away`);
+          L.circleMarker([g.lat, g.lng], {
+            radius: 6, fillColor: color, color: "white", weight: 1, fillOpacity: 0.7
+          }).addTo(map).bindPopup(`<b style="color:${color}">${g.user}</b><br/>Round ${g.round}<br/>${g.distance.toFixed(2)} km away`);
         });
       });
     }
@@ -387,20 +408,20 @@
       });
     }
 
-    async function loadSeedSettings() {
-      const seed = parseInt(document.getElementById("seed").value);
-      try {
-        const res = await fetch(`/seed-settings?seed=${seed}`);
-        seedSettings = await res.json();
-        document.getElementById('beachMode').checked = seedSettings.beachMode;
-        document.getElementById('urbanMode').checked = seedSettings.urbanMode;
-      } catch (e) {
-        seedSettings = { name: `Seed ${seed}`, beachMode: false, urbanMode: false };
-      }
-      if (!seedSettings.name.includes("Seed")) {
-        const confirmed = confirm(`This seed is named: "${seedSettings.name}". Use it?`);
-        if (confirmed) document.getElementById('seed').value = seed;
-      }
+    function showSeedAnalysis(seed) {
+      fetch(`/seed-analysis/${seed}`).then(r => r.json()).then(data => {
+        const content = document.getElementById('analysisContent');
+        let html = `<strong>${data.settings?.name || `Seed ${seed}`}</strong>`;
+        if (data.settings?.description) html += `<br><small>${data.settings.description}</small>`;
+        html += `<hr>`;
+        Object.keys(data.roundData || {}).sort().forEach(round => {
+          const g = data.roundData[round][0];
+          html += `<div class="round-analysis"><strong>Round ${round}</strong>: ${g.user} (${g.distance.toFixed(2)}km)</div>`;
+        });
+        content.innerHTML = html;
+        document.getElementById('analysisPanel').style.display = 'block';
+        loadAllGuesses(seed);
+      });
     }
 
     function loadRecentSeeds() {
@@ -410,7 +431,7 @@
         seeds.forEach(s => {
           const div = document.createElement('div');
           div.className = 'seed-item';
-          div.innerHTML = `<strong>${s.seed}</strong><br/><small>${s.playerCount} players • ${s.totalRounds} rounds</small>`;
+          div.innerHTML = `<strong>Seed ${s.seed}</strong><br/><small>${s.playerCount} players • ${s.totalRounds} rounds</small>`;
           div.onclick = () => {
             document.getElementById('seed').value = s.seed;
             loadSeedSettings();
@@ -421,31 +442,6 @@
         });
       });
     }
-
-    function showSeedAnalysis(seed) {
-      fetch(`/seed-analysis/${seed}`).then(r => r.json()).then(data => {
-        const panel = document.getElementById('analysisPanel');
-        const content = document.getElementById('analysisContent');
-        let html = `<h4>Seed ${seed}</h4>`;
-        Object.keys(data.roundData).sort().forEach(round => {
-          const g = data.roundData[round][0];
-          html += `<div class="round-analysis"><strong>Round ${round}</strong>: ${g.user} (${g.distance.toFixed(2)}km)</div>`;
-        });
-        content.innerHTML = html;
-        panel.style.display = 'block';
-      });
-    }
   </script>
-
-  <div id="analysisPanel">
-    <h3>Analysis</h3>
-    <div id="analysisContent"></div>
-    <button id="closeAnalysisBtn" style="margin-top:10px;">Close</button>
-  </div>
-
-  <script>
-    document.getElementById("closeAnalysisBtn").onclick = () => { document.getElementById("analysisPanel").style.display = 'none'; };
-  </script>
-
 </body>
 </html>
