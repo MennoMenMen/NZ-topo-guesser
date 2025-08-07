@@ -1,0 +1,19 @@
+{
+  "name": "topo-guesser-server",
+  "version": "1.0.0",
+  "description": "Multiplayer NZ Topo Guesser with Google Auth and Leaderboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["geoguesser", "nz", "game", "maps"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "body-parser": "^2.2.0",
+    "google-auth-library": "^10.2.1"
+  }
+}

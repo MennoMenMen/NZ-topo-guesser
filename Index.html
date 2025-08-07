@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NZ Topo Guesser</title>
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f6f8;
+      color: #333;
+      padding: 20px;
+      line-height: 1.4;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: 700;
+      color: #0078d4;
+    }
+    #controls {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 800px;
+      margin: 0 auto 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    #controls label,
+    #controls input,
+    #controls select {
+      font-size: 0.9rem;
+      margin: 0 8px 8px 0;
+    }
+    #controls input[type="number"],
+    #controls select,
+    #controls input[type="text"] {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 6px 10px;
+    }
+    #controls button {
+      background: #0078d4;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 8px 10px 0 0;
+    }
+    #controls button:disabled { background: #ccc; cursor: not-allowed; }
+    #roundInfo, #totalScore { margin-top: 10px; font-weight: 500; }
+    #result { margin-top: 15px; font-size: 1.1rem; font-weight: 600; min-height: 1.2em; }
+    #container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #mapFrameWrapper, #leafletMap {
+      flex: 1 1 400px;
+      height: 600px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    #mapFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      pointer-events: none;
+    }
+    #leafletMap { cursor: crosshair; }
+    #googleBtn, #userInfo {
+      margin: 10px 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>NZ Topo Guesser V6 - Sponsored by Water</h1>
+  <div id="controls">
+    <div id="googleBtn"></div>
+    <div id="userInfo"></div>
+    <label>Seed:
+      <input id="seed" type="number" value="121212" style="width:100px" />
+    </label>
+    <label>Zoom:
+      <select id="zoom">
+        <option value="12">12 (Easy)</option>
+        <option value="13">13 (Normal)</option>
+        <option value="14" selected>14 (Medium)</option>
+        <option value="15">15 (Hard)</option>
+      </select>
+    </label>
+    <label>Rounds:
+      <input id="totalRounds" type="number" min="1" value="5" style="width:60px" />
+    </label>
+    <label>Timer Mode:
+      <select id="timerMode">
+        <option value="30" selected>Normal (30 sec)</option>
+        <option value="5">Speedy (5 sec)</option>
+        <option value="60">Let him cook (60 sec)</option>
+        <option value="none">No Timer</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="beachMode" /> Beach Mode</label>
+    <label><input type="checkbox" id="urbanMode" /> Urban Mode</label>
+    <br/>
+    <button id="startBtn" disabled>Start Game</button>
+    <button id="submitBtn" disabled>Submit Guess</button>
+    <div id="roundInfo">Round: 0 of 0</div>
+    <div id="totalScore">Total Score: 0</div>
+    <div id="result"></div>
+  </div>
+  <div id="container">
+    <div id="mapFrameWrapper">
+      <iframe id="mapFrame" src="about:blank" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+    <div id="leafletMap"></div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="good1" src="SoundEffects/Good/are_you_single.mp3" preload="auto"></audio>
+  <audio id="good2" src="SoundEffects/Good/damn_that_good.mp3" preload="auto"></audio>
+  <audio id="good3" src="SoundEffects/Good/canterbury_above_average.mp3" preload="auto"></audio>
+  <audio id="good4" src="SoundEffects/Good/family_proud.mp3" preload="auto"></audio>
+  <audio id="good5" src="SoundEffects/Good/fantastic.mp3" preload="auto"></audio>
+  <audio id="good6" src="SoundEffects/Good/gold_star.mp3" preload="auto"></audio>
+  <audio id="good7" src="SoundEffects/Good/hope_left_world.mp3" preload="auto"></audio>
+  <audio id="good8" src="SoundEffects/Good/kid_thought_chathams.mp3" preload="auto"></audio>
+  <audio id="good9" src="SoundEffects/Good/make_me_proud.mp3" preload="auto"></audio>
+  <audio id="good10" src="SoundEffects/Good/oh_yeah.mp3" preload="auto"></audio>
+  <audio id="good11" src="SoundEffects/Good/perfect_keep_it_up.mp3" preload="auto"></audio>
+  <audio id="bad1" src="SoundEffects/Bad/pathetic.mp3" preload="auto"></audio>
+  <audio id="bad2" src="SoundEffects/Bad/oh_my_chathams.mp3" preload="auto"></audio>
+  <audio id="bad4" src="SoundEffects/Bad/absolutely_worthless.mp3" preload="auto"></audio>
+  <audio id="bad5" src="SoundEffects/Bad/toddler_done_better.mp3" preload="auto"></audio>
+  <audio id="bad6" src="SoundEffects/Bad/try_the_naki.mp3" preload="auto"></audio>
+  <audio id="bad7" src="SoundEffects/Bad/mess_up_left_with_right.mp3" preload="auto"></audio>
+  <audio id="bad8" src="SoundEffects/Bad/disgusting_wellington_better.mp3" preload="auto"></audio>
+  <audio id="bad9" src="SoundEffects/Bad/111_ambulance_stupid.mp3" preload="auto"></audio>
+  <audio id="bad10" src="SoundEffects/Bad/missclick.mp3" preload="auto"></audio>
+  <audio id="bad11" src="SoundEffects/Bad/better_eyes_closed.mp3" preload="auto"></audio>
+  <audio id="bad12" src="SoundEffects/Bad/aghh_heart_attack.mp3" preload="auto"></audio>
+  <audio id="bad13" src="SoundEffects/Bad/roast_nelson.mp3" preload="auto"></audio>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <script>
+    // === GAME LOGIC ===
+    const REGIONS = [
+      {latMin: -36.372506, latMax: -34.112845, lngMin: 171.967895, lngMax: 174.950684},
+      {latMin: -37.756495, latMax: -35.955081, lngMin: 174.076171, lngMax: 176.350341},
+      {latMin: -40.157354, latMax: -37.700960, lngMin: 174.526612, lngMax: 177.328126},
+      {latMin: -39.896229, latMax: -38.744969, lngMin: 173.661987, lngMax: 174.716675},
+      {latMin: -39.295443, latMax: -37.448614, lngMin: 176.888672, lngMax: 178.608032},
+      {latMin: -40.605280, latMax: -39.901176, lngMin: 174.841919, lngMax: 177.033691},
+      {latMin: -41.586984, latMax: -40.589517, lngMin: 174.469482, lngMax: 176.458008},
+      {latMin: -44.382139, latMax: -43.663472, lngMin: 183.008057, lngMax: 184.040772},
+      {latMin: -43.288476, latMax: -40.440093, lngMin: 172.041504, lngMax: 173.067627},
+      {latMin: -41.734703, latMax: -40.618724, lngMin: 172.940185, lngMax: 174.478271},
+      {latMin: -43.143539, latMax: -41.766034, lngMin: 172.749023, lngMax: 174.111328},
+      {latMin: -43.991914, latMax: -43.372382, lngMin: 168.363281, lngMax: 173.186279},
+      {latMin: -43.434230, latMax: -40.778469, lngMin: 169.653077, lngMax: 172.234864},
+      {latMin: -47.307792, latMax: -46.528100, lngMin: 166.819702, lngMax: 168.608277},
+      {latMin: -46.241388, latMax: -43.932577, lngMin: 166.346191, lngMax: 169.283935},
+      {latMin: -46.679334, latMax: -46.236597, lngMin: 167.673340, lngMax: 170.002441},
+      {latMin: -46.250672, latMax: -43.824558, lngMin: 167.985352, lngMax: 172.335938},
+      {latMin: -44.363558, latMax: -44.213195, lngMin: 183.635788, lngMax: 184.015503}
+    ];
+
+    function wrapLongitude(lon) {
+      return ((lon + 180) % 360 + 360) % 360 - 180;
+    }
+
+    const goodSounds = ['good1','good2','good3','good4','good5','good6','good7','good8','good9','good10','good11'];
+    const badSounds = ['bad1','bad2','bad4','bad5','bad6','bad7','bad8','bad9','bad10','bad11','bad12','bad13'];
+
+    function playRandomSound(soundList) {
+      const id = soundList[Math.floor(Math.random() * soundList.length)];
+      const audio = document.getElementById(id);
+      if (audio) audio.play().catch(e => console.warn("Playback blocked:", e));
+    }
+
+    function seededRandom(s) {
+      s.value = (s.value * 9301 + 49297) % 233280;
+      return s.value / 233280;
+    }
+
+    function randomInRange(s, min, max) {
+      return min + seededRandom(s) * (max - min);
+    }
+
+    function haversine(aLat, aLng, bLat, bLng) {
+      const toRad = x => x * Math.PI / 180, R = 6371;
+      const dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+      const h = Math.sin(dLat/2)**2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1-h));
+    }
+
+    function getRandomNZLocation(s) {
+      const region = REGIONS[Math.floor(seededRandom(s) * REGIONS.length)];
+      return {
+        lat: randomInRange(s, region.latMin, region.latMax),
+        lng: randomInRange(s, region.lngMin, region.lngMax)
+      };
+    }
+
+    async function tileHasLand(lat, lng, zoom) {
+      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
+      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return false;
+        const blob = await res.blob();
+        const bmp = await createImageBitmap(blob);
+        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bmp, 0, 0);
+        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b] = [data[i], data[i+1], data[i+2]];
+          if (r < 200 && g < 200 && b < 200) return true;
+        }
+      } catch { return false; }
+      return false;
+    }
+
+    async function tileHasEnoughWater(lat, lng, zoom) {
+      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
+      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return false;
+        const blob = await res.blob();
+        const bmp = await createImageBitmap(blob);
+        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bmp, 0, 0);
+        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+        let water = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b] = [data[i], data[i+1], data[i+2]];
+          if (b > 240 && b < 250 && r > 200 && r < 220 && g > 225 && g < 238) water++;
+        }
+        return (water / (bmp.width * bmp.height)) >= 0.1;
+      } catch { return false; }
+    }
+
+    async function tileHasEnoughUrban(lat, lng, zoom) {
+      const x = longitudeToTileX(lng, zoom), y = latitudeToTileY(lat, zoom);
+      const url = `https://basemaps.linz.govt.nz/v1/tiles/topo-raster/WebMercatorQuad/${zoom}/${x}/${y}.webp?api=c01k1w81j8nbj00y7gy7x4b17j6`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return false;
+        const blob = await res.blob();
+        const bmp = await createImageBitmap(blob);
+        const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bmp, 0, 0);
+        const data = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+        let urban = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b] = [data[i], data[i+1], data[i+2]];
+          if (r > 180 && r < 190 && g > 180 && g < 190 && b > 175 && b < 187) urban++;
+        }
+        return (urban / (bmp.width * bmp.height)) >= 0.01;
+      } catch { return false; }
+    }
+
+    async function getValidLocation(s, beachMode, urbanMode, zoom) {
+      for (let i = 0; i < 500; i++) {
+        const loc = getRandomNZLocation(s);
+        if (beachMode) {
+          if (await tileHasLand(loc.lat, loc.lng, zoom) && await tileHasEnoughWater(loc.lat, loc.lng, zoom)) return loc;
+        } else if (urbanMode) {
+          if (await tileHasEnoughUrban(loc.lat, loc.lng, zoom)) return loc;
+        } else {
+          if (await tileHasLand(loc.lat, loc.lng, zoom)) return loc;
+        }
+      }
+      return { lat: -41.3, lng: 174.8 };
+    }
+
+    function longitudeToTileX(lon, zoom) {
+      const wrapped = wrapLongitude(lon);
+      return Math.floor((wrapped + 180) / 360 * Math.pow(2, zoom));
+    }
+
+    function latitudeToTileY(lat, zoom) {
+      const rad = lat * Math.PI / 180;
+      return Math.floor((1 - Math.log(Math.tan(rad) + 1/Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    }
+
+    // === GAME STATE ===
+    let seedObj = { value: 12345 };
+    let answerLat = 0, answerLng = 0, guessLat = null, guessLng = null;
+    let hasGuessed = false, timerInt = null, roundsPlayed = 0, totalRounds = 0, scoreTotal = 0;
+    let map, guessMarker;
+    let currentUser = "Anonymous";
+
+    function updateUI() {
+      document.getElementById('roundInfo').textContent = `Round ${roundsPlayed} of ${totalRounds}`;
+      document.getElementById('totalScore').textContent = `Total Score: ${scoreTotal}`;
+    }
+
+    async function startGame() {
+      clearInterval(timerInt);
+      hasGuessed = false;
+      guessLat = guessLng = null;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('result').textContent = '';
+      if (roundsPlayed === 0) {
+        totalRounds = parseInt(document.getElementById('totalRounds').value) || 1;
+        scoreTotal = 0;
+        const sv = parseInt(document.getElementById('seed').value);
+        seedObj.value = isNaN(sv) ? 12345 : sv;
+      }
+      roundsPlayed++;
+      updateUI();
+      document.getElementById('mapFrame').style.pointerEvents = 'none';
+      const zoom = +document.getElementById('zoom').value;
+      const beachMode = document.getElementById('beachMode').checked;
+      const urbanMode = document.getElementById('urbanMode').checked;
+      const timerValue = document.getElementById('timerMode').value;
+      const timerLen = timerValue === 'none' ? null : parseInt(timerValue);
+
+      const loc = await getValidLocation(seedObj, beachMode, urbanMode, zoom);
+      answerLat = loc.lat;
+      answerLng = loc.lng;
+      document.getElementById('mapFrame').src =
+        `https://www.topomap.co.nz/NZTopoMap?v=2&ll=${answerLat},${answerLng}&z=${zoom}`;
+
+      if (guessMarker) map.removeLayer(guessMarker);
+      map.setView([-41.3, 174.8], 5);
+
+      if (timerLen !== null) {
+        let t = timerLen;
+        document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
+        timerInt = setInterval(() => {
+          t--;
+          if (t > 0) {
+            document.getElementById('result').textContent = `Timer: ${t}s remaining…`;
+          } else {
+            clearInterval(timerInt);
+            if (!hasGuessed) {
+              document.getElementById('submitBtn').disabled = true;
+              if (guessLat !== null) {
+                submitGuess();
+              } else {
+                hasGuessed = true;
+                document.getElementById('result').textContent = "Time's up! No guess made. Score: 0/???";
+                updateUI();
+                document.getElementById('mapFrame').style.pointerEvents = 'auto';
+                L.circleMarker([answerLat, answerLng], {
+                  radius: 10,
+                  fillColor: 'green',
+                  color: 'black',
+                  weight: 2,
+                  fillOpacity: 0.8
+                }).addTo(map).bindPopup('📍 Actual Location').openPopup();
+                document.getElementById('startBtn').disabled = (roundsPlayed >= totalRounds);
+              }
+            }
+          }
+        }, 1000);
+      }
+    }
+
+    function submitGuess() {
+      if (hasGuessed || guessLat == null) return;
+      hasGuessed = true;
+      clearInterval(timerInt);
+      document.getElementById('mapFrame').style.pointerEvents = 'auto';
+      const dist = haversine(answerLat, answerLng, guessLat, guessLng);
+      const score = Math.max(0, Math.round(100 - 40 * (Math.log(dist + 1) - 5)));
+      scoreTotal += score;
+      document.getElementById('result').textContent = `You were ${dist.toFixed(2)} km away → Score: ${score}/???`;
+
+      sendGuessToServer(guessLat, guessLng, dist);
+      updateUI();
+
+      setTimeout(loadOtherGuesses, 500);
+
+      L.circleMarker([answerLat, answerLng], {
+        radius: 10,
+        fillColor: 'green',
+        color: 'black',
+        weight: 2,
+        fillOpacity: 0.8
+      }).addTo(map).bindPopup('📍 Actual Location').openPopup();
+
+      document.getElementById('startBtn').disabled = (roundsPlayed >= totalRounds);
+
+      if (dist < 100) playRandomSound(goodSounds);
+      else if (dist > 700) playRandomSound(badSounds);
+
+      if (roundsPlayed >= totalRounds) {
+        setTimeout(showLeaderboard, 1000);
+      }
+    }
+
+    function initMap() {
+      map = L.map('leafletMap', { center: [-41.3, 174.8], zoom: 5 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> contributors'
+      }).addTo(map);
+
+      map.on('click', e => {
+        if (hasGuessed) return;
+        guessLat = e.latlng.lat;
+        guessLng = e.latlng.lng;
+        if (guessMarker) map.removeLayer(guessMarker);
+        guessMarker = L.marker([guessLat, guessLng]).addTo(map);
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('result').textContent = `Guess: ${guessLat.toFixed(4)}, ${guessLng.toFixed(4)} – click Submit.`;
+      });
+
+      document.getElementById('startBtn').onclick = () => {
+        if (!currentUser) {
+          alert("Please log in with Google first.");
+          return;
+        }
+        document.getElementById('startBtn').disabled = true;
+        startGame();
+      };
+      document.getElementById('submitBtn').onclick = submitGuess;
+      updateUI();
+    }
+
+    // === GOOGLE AUTH ===
+    window.onload = () => {
+      initMap();
+      const seed = Math.floor(Math.random() * 1_000_000);
+      document.getElementById('seed').value = seed;
+
+      // Render Google button
+      google.accounts.id.initialize({
+        client_id: "135826388765-svojries0i42qbn8te7uu6fkqq3ptpln.apps.googleusercontent.com",
+        callback: handleCredentialResponse
+      });
+      google.accounts.id.renderButton(document.getElementById("googleBtn"), {
+        theme: 'outline', size: 'large', text: 'signin_with'
+      });
+    };
+
+    async function handleCredentialResponse(response) {
+      const res = await fetch('/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+      }).then(r => r.json());
+
+      if (res.user) {
+        currentUser = res.user.name;
+        document.getElementById('userInfo').innerHTML = `👤 Logged in as <b>${res.user.name}</b>`;
+        document.getElementById('startBtn').disabled = false;
+      }
+    }
+
+    // === NETWORKING ===
+    function sendGuessToServer(lat, lng, distance) {
+      fetch("/guess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: currentUser,
+          seed: parseInt(document.getElementById("seed").value),
+          round: roundsPlayed,
+          lat, lng, distance
+        }),
+      }).catch(err => console.warn("Failed to send guess:", err));
+    }
+
+    function loadOtherGuesses() {
+      const seed = parseInt(document.getElementById("seed").value);
+      fetch(`/guesses?seed=${seed}`)
+        .then(r => r.json())
+        .then(data => {
+          data.forEach(g => {
+            if (g.user !== currentUser) {
+              L.circleMarker([g.lat, g.lng], {
+                radius: 6, fillColor: "blue", color: "white", weight: 1, fillOpacity: 0.7
+              }).addTo(map).bindPopup(`📍 ${g.user}: ${g.distance.toFixed(2)} km away`);
+            }
+          });
+        });
+    }
+
+    function showLeaderboard() {
+      const seed = parseInt(document.getElementById("seed").value);
+      fetch(`/leaderboard?seed=${seed}`)
+        .then(r => r.json())
+        .then(data => {
+          const list = data.map(d => `<li><strong>${d.user}</strong>: ${d.totalScore} pts (${d.avgScore} avg)</li>`).join("");
+          document.getElementById("result").innerHTML += `<br/><strong>🏆 Leaderboard:</strong><ol>${list}</ol>`;
+        });
+    }
+  </script>
+</body>
+</html>
