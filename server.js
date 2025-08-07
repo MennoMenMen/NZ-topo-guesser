@@ -16,7 +16,7 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 // Persistent storage
 const DATA_FILE = path.join(__dirname, "gameData.json");
 
-// Initialize data file if it doesn't exist
+// Initialize data file
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({
     guesses: [],
@@ -26,7 +26,7 @@ if (!fs.existsSync(DATA_FILE)) {
   }, null, 2));
 }
 
-// Helper functions
+// Load/save helpers
 function loadData() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE));
@@ -45,7 +45,7 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// POST /guess - Save a guess
+// POST /guess - Save guess
 app.post("/guess", (req, res) => {
   const data = loadData();
   const { user, seed, round, lat, lng, distance } = req.body;
@@ -57,10 +57,8 @@ app.post("/guess", (req, res) => {
   const guess = { user, seed: String(seed), round, lat, lng, distance, timestamp };
   data.guesses.push(guess);
 
-  // Calculate score
   const score = Math.max(0, Math.round(100 - 40 * (Math.log(distance + 1) - 5)));
 
-  // Update leaderboard
   if (!data.leaderboards[seed]) data.leaderboards[seed] = {};
   if (!data.leaderboards[seed][user]) {
     data.leaderboards[seed][user] = { totalScore: 0, rounds: 0, bestDistance: Infinity, timestamp };
@@ -79,23 +77,20 @@ app.post("/answer", (req, res) => {
   const data = loadData();
   const { seed, round, lat, lng } = req.body;
   if (!seed || round === undefined) return res.status(400).json({ error: "Missing seed or round" });
-
   if (!data.answers[seed]) data.answers[seed] = {};
   data.answers[seed][round] = { lat, lng, timestamp: new Date().toISOString() };
-
   saveData(data);
   res.json({ message: "Answer saved" });
 });
 
-// GET /guesses/:seed/:round - Get guesses for a specific round
+// GET /guesses/:seed/:round
 app.get("/guesses/:seed/:round", (req, res) => {
   const { seed, round } = req.params;
   const data = loadData();
-  const guesses = data.guesses.filter(g => g.seed === String(seed) && g.round === parseInt(round));
-  res.json(guesses);
+  res.json(data.guesses.filter(g => g.seed === String(seed) && g.round === parseInt(round)));
 });
 
-// GET /guesses?seed=123 - All guesses for seed
+// GET /guesses?seed=123
 app.get("/guesses", (req, res) => {
   const { seed } = req.query;
   if (!seed) return res.status(400).json({ error: "Seed required" });
@@ -121,7 +116,32 @@ app.get("/leaderboard", (req, res) => {
   res.json(leaderboard);
 });
 
-// GET /api/seeds/recent - Seeds sorted by player count
+// GET /seed-settings?seed=123
+app.get("/seed-settings", (req, res) => {
+  const { seed } = req.query;
+  const data = loadData();
+  res.json(data.seedSettings[seed] || { name: `Seed ${seed}`, description: "", beachMode: false, urbanMode: false });
+});
+
+// POST /seed-settings - Save seed name, description, mode
+app.post("/seed-settings", (req, res) => {
+  const data = loadData();
+  const { seed, name, description, beachMode, urbanMode } = req.body;
+  if (!seed) return res.status(400).json({ error: "Seed required" });
+  if (!data.seedSettings[seed]) {
+    data.seedSettings[seed] = {
+      name: name || `Seed ${seed}`,
+      description: description || "",
+      beachMode: !!beachMode,
+      urbanMode: !!urbanMode,
+      timestamp: new Date().toISOString()
+    };
+  }
+  saveData(data);
+  res.json({ message: "Settings saved" });
+});
+
+// GET /api/seeds/recent - Sorted by player count
 app.get("/api/seeds/recent", (req, res) => {
   const data = loadData();
   const seedMap = {};
@@ -136,31 +156,34 @@ app.get("/api/seeds/recent", (req, res) => {
       playerCount: info.playerCount.size,
       timestamp: info.timestamp,
       totalRounds: data.answers[seed] ? Object.keys(data.answers[seed]).length : 0,
-      topScore: data.leaderboards[seed] 
-        ? Math.max(...Object.values(data.leaderboards[seed]).map(e => e.totalScore))
-        : 0
+      topScore: data.leaderboards[seed] ? Math.max(...Object.values(data.leaderboards[seed]).map(e => e.totalScore)) : 0
     }))
-    .sort((a, b) => b.playerCount - a.playerCount); // Sort by player count
+    .sort((a, b) => b.playerCount - a.playerCount);
   res.json(recent);
 });
 
-// POST /seed-settings - Save custom name and mode
-app.post("/seed-settings", (req, res) => {
+// GET /seed-analysis/:seed
+app.get("/seed-analysis/:seed", (req, res) => {
+  const { seed } = req.params;
   const data = loadData();
-  const { seed, name, beachMode, urbanMode } = req.body;
-  if (!seed) return res.status(400).json({ error: "Seed required" });
-  if (!data.seedSettings[seed]) {
-    data.seedSettings[seed] = { name: name || `Seed ${seed}`, beachMode: !!beachMode, urbanMode: !!urbanMode };
-  }
-  saveData(data);
-  res.json({ message: "Settings saved" });
-});
+  const roundData = {};
+  const answers = data.answers[seed] || {};
 
-// GET /seed-settings?seed=123
-app.get("/seed-settings", (req, res) => {
-  const { seed } = req.query;
-  const data = loadData();
-  res.json(data.seedSettings[seed] || { name: `Seed ${seed}`, beachMode: false, urbanMode: false });
+  data.guesses
+    .filter(g => g.seed === String(seed))
+    .forEach(guess => {
+      if (!roundData[guess.round]) roundData[guess.round] = [];
+      roundData[guess.round].push({
+        user: guess.user,
+        lat: guess.lat,
+        lng: guess.lng,
+        distance: guess.distance,
+        timestamp: guess.timestamp,
+        score: Math.max(0, Math.round(100 - 40 * (Math.log(guess.distance + 1) - 5)))
+      });
+    });
+
+  res.json({ roundData, answers, settings: data.seedSettings[seed] });
 });
 
 // POST /auth/google
