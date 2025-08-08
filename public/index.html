@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NZ Topo Guesser</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- Recent Seeds Panel -->
+  <div id="recentSeedsPanel">
+    <h3>Recent Seeds</h3>
+    <div id="recentSeedsList">Loading...</div>
+    <button id="guestModeBtn">Play as Guest</button>
+    <button id="showAllGuessesBtn">Show All Guesses</button>
+    <button id="analyzeSeedBtn">Analyze Seed</button>
+    <button id="hideRecentBtn">Hide Panel</button>
+  </div>
+
+  <!-- Get other files -->
+  <script src="game.js" defer></script>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Analysis Panel -->
+  <div id="analysisPanel">
+    <h3>Round Analysis</h3>
+    <div id="analysisContent"></div>
+    <button id="closeAnalysisBtn" style="margin-top:10px;">Close</button>
+  </div>
+
+  <!-- Game -->
+  <h1>NZ Topo Guesser V9 - Sponsored by Water ai slop test</h1>
+  <div id="controls">
+    <div id="googleBtn"></div>
+    <div id="userInfo"></div>
+    <label>Seed:
+      <input id="seed" type="number" value="121212" style="width:100px" />
+    </label>
+    <label>Zoom:
+      <select id="zoom">
+        <option value="12">12 (Easy)</option>
+        <option value="13">13 (Normal)</option>
+        <option value="14" selected>14 (Medium)</option>
+        <option value="15">15 (Hard)</option>
+      </select>
+    </label>
+    <label>Rounds:
+      <input id="totalRounds" type="number" min="1" value="5" style="width:60px" />
+    </label>
+    <label>Timer Mode:
+      <select id="timerMode">
+        <option value="30" selected>Normal (30 sec)</option>
+        <option value="5">Speedy (5 sec)</option>
+        <option value="60">Let him cook (60 sec)</option>
+        <option value="none">No Timer</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="beachMode" /> Beach Mode</label>
+    <label><input type="checkbox" id="urbanMode" /> Urban Mode</label>
+    <br/>
+    <button id="startBtn" disabled>Start Game</button>
+    <button id="submitBtn" disabled>Submit Guess</button>
+    <button id="replayBtn" disabled>Replay</button>
+    <div id="roundInfo">Round: 0 of 0</div>
+    <div id="totalScore">Total Score: 0</div>
+    <div id="result"></div>
+  </div>
+
+  <div id="container">
+    <div id="mapFrameWrapper">
+      <iframe id="mapFrame" src="about:blank" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+    <div id="leafletMap"></div>
+  </div>
+
+  <!-- Audio -->
+  <audio id="good1" src="SoundEffects/Good/are_you_single.mp3" preload="auto"></audio>
+  <audio id="bad1" src="SoundEffects/Bad/pathetic.mp3" preload="auto"></audio>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</body>
+</html>
+
+
